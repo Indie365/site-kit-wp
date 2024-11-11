@@ -220,6 +220,15 @@ describe( 'AudienceSelectionPanel', () => {
 
 	describe( 'AudienceItems', () => {
 		it( 'should list available audiences', async () => {
+			registry
+				.dispatch( CORE_UI )
+				.setValue( AUDIENCE_SELECTION_PANEL_OPENED_KEY, true );
+
+			fetchMock.postOnce( syncAvailableAudiencesEndpoint, {
+				body: availableAudiences,
+				status: 200,
+			} );
+
 			const { waitForRegistry } = render( <AudienceSelectionPanel />, {
 				registry,
 			} );
@@ -1064,6 +1073,15 @@ describe( 'AudienceSelectionPanel', () => {
 			};
 
 			registry
+				.dispatch( CORE_UI )
+				.setValue( AUDIENCE_SELECTION_PANEL_OPENED_KEY, true );
+
+			fetchMock.postOnce( syncAvailableAudiencesEndpoint, {
+				body: nonSiteKitAvailableAudiences,
+				status: 200,
+			} );
+
+			registry
 				.dispatch( MODULES_ANALYTICS_4 )
 				.setAvailableAudiences( nonSiteKitAvailableAudiences );
 
@@ -1120,6 +1138,15 @@ describe( 'AudienceSelectionPanel', () => {
 
 			provideUserAuthentication( registry, {
 				grantedScopes: [],
+			} );
+
+			registry
+				.dispatch( CORE_UI )
+				.setValue( AUDIENCE_SELECTION_PANEL_OPENED_KEY, true );
+
+			fetchMock.postOnce( syncAvailableAudiencesEndpoint, {
+				body: nonSiteKitAvailableAudiences,
+				status: 200,
 			} );
 
 			registry
@@ -1708,18 +1735,14 @@ describe( 'AudienceSelectionPanel', () => {
 			);
 		} );
 
-		it.each( [
-			[ 'resyncing available audiences', 'syncAvailableAudiences', [] ],
-			[ 'retrieving user count', 'getReport', [ reportOptions ] ],
-		] )(
-			'should display an error notice when there is an insufficient permissions error while %s',
-			async ( _, storeFunctionName, args ) => {
-				const error = {
-					code: 'test_error',
-					message: 'Error message.',
-					data: { reason: ERROR_REASON_INSUFFICIENT_PERMISSIONS },
-				};
+		describe( 'should display an insufficient permissions error', () => {
+			const error = {
+				code: 'test_error',
+				message: 'Error message.',
+				data: { reason: ERROR_REASON_INSUFFICIENT_PERMISSIONS },
+			};
 
+			beforeEach( () => {
 				provideUserInfo( registry );
 				provideModules( registry );
 				provideModuleRegistrations( registry );
@@ -1729,11 +1752,9 @@ describe( 'AudienceSelectionPanel', () => {
 					measurementID: '56789',
 					webDataStreamID: '78901',
 				} );
+			} );
 
-				registry
-					.dispatch( MODULES_ANALYTICS_4 )
-					.receiveError( error, storeFunctionName, args );
-
+			afterEach( async () => {
 				const { getByText, waitForRegistry } = render(
 					<AudienceSelectionPanel />,
 					{
@@ -1750,28 +1771,43 @@ describe( 'AudienceSelectionPanel', () => {
 				).toBeInTheDocument();
 				expect( getByText( /get help/i ) ).toBeInTheDocument();
 				expect( getByText( /request access/i ) ).toBeInTheDocument();
-			}
-		);
+			} );
 
-		it.each( [
-			[ 'resyncing available audiences', 'syncAvailableAudiences', [] ],
-			[ 'retrieving user count', 'getReport', [ reportOptions ] ],
-		] )(
-			'should display an error notice when %s fails',
-			async ( _, storeFunctionName, args ) => {
-				const error = {
-					code: 'test_error',
-					message: 'Error message.',
-					data: {},
-				};
+			it( 'while resyncing available audiences', () => {
+				registry
+					.dispatch( MODULES_ANALYTICS_4 )
+					.receiveError( error, 'syncAvailableAudiences', [] );
+			} );
 
-				provideModules( registry );
-				provideModuleRegistrations( registry );
+			it( 'while retrieving user count', () => {
+				registry
+					.dispatch( CORE_UI )
+					.setValue( AUDIENCE_SELECTION_PANEL_OPENED_KEY, true );
+
+				fetchMock.postOnce( syncAvailableAudiencesEndpoint, {
+					body: availableAudiences,
+					status: 200,
+				} );
 
 				registry
 					.dispatch( MODULES_ANALYTICS_4 )
-					.receiveError( error, storeFunctionName, args );
+					.receiveError( error, 'getReport', [ reportOptions ] );
+			} );
+		} );
 
+		describe( 'should display an error message', () => {
+			const error = {
+				code: 'test_error',
+				message: 'Error message.',
+				data: {},
+			};
+
+			beforeEach( () => {
+				provideModules( registry );
+				provideModuleRegistrations( registry );
+			} );
+
+			afterEach( async () => {
 				const { getByText, waitForRegistry } = render(
 					<AudienceSelectionPanel />,
 					{
@@ -1785,8 +1821,29 @@ describe( 'AudienceSelectionPanel', () => {
 					getByText( /Data loading failed/i )
 				).toBeInTheDocument();
 				expect( getByText( /retry/i ) ).toBeInTheDocument();
-			}
-		);
+			} );
+
+			it( 'while resyncing available audiences', () => {
+				registry
+					.dispatch( MODULES_ANALYTICS_4 )
+					.receiveError( error, 'syncAvailableAudiences', [] );
+			} );
+
+			it( 'while retrieving user count', () => {
+				registry
+					.dispatch( CORE_UI )
+					.setValue( AUDIENCE_SELECTION_PANEL_OPENED_KEY, true );
+
+				fetchMock.postOnce( syncAvailableAudiencesEndpoint, {
+					body: availableAudiences,
+					status: 200,
+				} );
+
+				registry
+					.dispatch( MODULES_ANALYTICS_4 )
+					.receiveError( error, 'getReport', [ reportOptions ] );
+			} );
+		} );
 	} );
 
 	describe( 'Footer', () => {
@@ -1826,10 +1883,13 @@ describe( 'AudienceSelectionPanel', () => {
 
 		it( 'should display error message when no group is checked', async () => {
 			registry
-				.dispatch( CORE_FORMS )
-				.setValues( AUDIENCE_SELECTION_FORM, {
-					[ AUDIENCE_SELECTED ]: [],
-				} );
+				.dispatch( CORE_UI )
+				.setValue( AUDIENCE_SELECTION_PANEL_OPENED_KEY, true );
+
+			fetchMock.postOnce( syncAvailableAudiencesEndpoint, {
+				body: availableAudiences,
+				status: 200,
+			} );
 
 			const { findByLabelText, waitForRegistry } = render(
 				<AudienceSelectionPanel />,
@@ -1839,6 +1899,15 @@ describe( 'AudienceSelectionPanel', () => {
 			);
 
 			await waitForRegistry();
+
+			// De-select the selected groups.
+			const newVisitorsCheckbox = await findByLabelText( 'New visitors' );
+			fireEvent.click( newVisitorsCheckbox );
+
+			const returningVisitorsCheckbox = await findByLabelText(
+				'Returning visitors'
+			);
+			fireEvent.click( returningVisitorsCheckbox );
 
 			expect(
 				document.querySelector(
