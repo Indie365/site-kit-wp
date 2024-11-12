@@ -257,6 +257,7 @@ const baseSelectors = {
 	 *
 	 * @return {Array<string>|undefined} An array of Key Metric widget slugs, or undefined if the user input settings are not loaded.
 	 */
+	/* eslint-disable complexity */
 	getAnswerBasedMetrics: createRegistrySelector(
 		( select ) => ( state, purposeOverride ) => {
 			const userInputSettings =
@@ -337,7 +338,9 @@ const baseSelectors = {
 				case 'sell_products_or_service':
 					return showConversionTailoredMetrics
 						? [
-								KM_ANALYTICS_POPULAR_PRODUCTS,
+								hasProductPostType()
+									? KM_ANALYTICS_POPULAR_PRODUCTS
+									: KM_ANALYTICS_POPULAR_CONTENT,
 								KM_ANALYTICS_TOP_CITIES_DRIVING_PURCHASES,
 								KM_ANALYTICS_TOP_DEVICE_DRIVING_PURCHASES,
 								KM_ANALYTICS_TOP_TRAFFIC_SOURCE_DRIVING_ADD_TO_CART,
@@ -353,6 +356,49 @@ const baseSelectors = {
 								KM_ANALYTICS_ENGAGED_TRAFFIC_SOURCE,
 								KM_SEARCH_CONSOLE_POPULAR_KEYWORDS,
 								KM_ANALYTICS_TOP_TRAFFIC_SOURCE,
+						  ];
+
+				case 'sell_products':
+					return showConversionTailoredMetrics
+						? [
+								hasProductPostType()
+									? KM_ANALYTICS_POPULAR_PRODUCTS
+									: KM_ANALYTICS_POPULAR_CONTENT,
+								KM_ANALYTICS_TOP_CITIES_DRIVING_PURCHASES,
+								KM_ANALYTICS_TOP_DEVICE_DRIVING_PURCHASES,
+								KM_ANALYTICS_TOP_TRAFFIC_SOURCE_DRIVING_ADD_TO_CART,
+								KM_ANALYTICS_TOP_TRAFFIC_SOURCE_DRIVING_PURCHASES,
+								KM_ANALYTICS_ADSENSE_TOP_EARNING_CONTENT,
+								KM_ANALYTICS_TOP_CONVERTING_TRAFFIC_SOURCE,
+								KM_SEARCH_CONSOLE_POPULAR_KEYWORDS,
+						  ]
+						: [
+								hasProductPostType()
+									? KM_ANALYTICS_POPULAR_PRODUCTS
+									: KM_ANALYTICS_POPULAR_CONTENT,
+								KM_ANALYTICS_ENGAGED_TRAFFIC_SOURCE,
+								KM_SEARCH_CONSOLE_POPULAR_KEYWORDS,
+								KM_ANALYTICS_TOP_TRAFFIC_SOURCE,
+						  ];
+
+				case 'provide_services':
+					return showConversionTailoredMetrics
+						? [
+								KM_ANALYTICS_TOP_CITIES_DRIVING_LEADS,
+								KM_ANALYTICS_TOP_PAGES_DRIVING_LEADS,
+								KM_ANALYTICS_TOP_TRAFFIC_SOURCE_DRIVING_LEADS,
+								KM_ANALYTICS_TOP_TRAFFIC_SOURCE,
+								KM_ANALYTICS_ENGAGED_TRAFFIC_SOURCE,
+								KM_SEARCH_CONSOLE_POPULAR_KEYWORDS,
+								KM_ANALYTICS_POPULAR_CONTENT,
+								KM_ANALYTICS_TOP_RETURNING_VISITOR_PAGES,
+						  ]
+						: [
+								KM_ANALYTICS_TOP_TRAFFIC_SOURCE,
+								KM_ANALYTICS_ENGAGED_TRAFFIC_SOURCE,
+								KM_SEARCH_CONSOLE_POPULAR_KEYWORDS,
+								KM_ANALYTICS_POPULAR_CONTENT,
+								KM_ANALYTICS_TOP_RETURNING_VISITOR_PAGES,
 						  ];
 
 				case 'share_portfolio':
